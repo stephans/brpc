@@ -1,5 +1,14 @@
-cmake_minimum_required(VERSION 2.8.10)
-project(brpc C CXX)
+cmake_minimum_required(VERSION 3.5)
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+include(HunterGate)
+HunterGate(
+    URL "https://github.com/ambroff/hunter/archive/ccb28783990b0f3ef0759024ac5583db4f9148bc.zip"
+    SHA1 "7a3c93712e7185a1b432cbc7787762da7e281e31"
+)
+
+project(brpc)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # require at least gcc 4.8
@@ -18,7 +27,9 @@ endif()
 option(BRPC_WITH_GLOG "With glog" OFF)
 option(DEBUG "Print debug logs" OFF)
 option(WITH_DEBUG_SYMBOLS "With debug symbols" ON)
-option(BUILD_UNIT_TESTS "Whether to build unit tests" OFF)
+option(BRPC_BUILD_SHARED "Build shared library" OFF)
+option(BRPC_BUILD_GEN_MCPACK "Build protoc-gen-mcpack executable" OFF)
+option(BRPC_BUILD_TOOLS "Build brpc tools used for debugging" OFF)
 
 set(WITH_GLOG_VAL "0")
 if(BRPC_WITH_GLOG)
@@ -31,10 +42,10 @@ endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/config.h.in ${CMAKE_SOURCE_DIR}/src/butil/config.h @ONLY)
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+hunter_add_package(gflags)
+find_package(gflags CONFIG REQUIRED)
 
-find_package(GFLAGS REQUIRED)
-
+get_target_property(GFLAGS_INCLUDE_PATH gflags INTERFACE_INCLUDE_DIRECTORIES)
 execute_process(
     COMMAND bash -c "grep \"namespace [_A-Za-z0-9]\\+ {\" ${GFLAGS_INCLUDE_PATH}/gflags/gflags_declare.h | head -1 | awk '{print $2}' | tr -d '\n'"
     OUTPUT_VARIABLE GFLAGS_NS
@@ -88,7 +99,19 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     endif()
 endif()
 
-include(FindProtobuf)
+hunter_add_package(OpenSSL)
+find_package(OpenSSL REQUIRED)
+
+hunter_add_package(ZLIB)
+find_package(ZLIB CONFIG REQUIRED)
+
+option(protobuf_MODULE_COMPATIBLE "use protobuf in module compatible mode" ON)
+hunter_add_package(Protobuf)
+find_package(Protobuf CONFIG REQUIRED)
+
+hunter_add_package(leveldb)
+find_package(leveldb CONFIG REQUIRED)
+
 include(FindThreads)
 
 find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h)
@@ -111,26 +134,16 @@ if(NOT PROTOC_LIB)
     message(FATAL_ERROR "Fail to find protoc lib")
 endif()
 
-include_directories(
-        ${GFLAGS_INCLUDE_PATH}
-        ${PROTOBUF_INCLUDE_DIRS}
-        ${LEVELDB_INCLUDE_PATH}
-        )
-
 set(DYNAMIC_LIB
-    ${GFLAGS_LIBRARY}
-    ${PROTOBUF_LIBRARIES}
-    ${LEVELDB_LIB}
-    ${PROTOC_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
-    rt
-    ssl
-    crypto
     dl
-    z
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    ZLIB::zlib
     )
-if(BRPC_WITH_GLOG)
-    set(DYNAMIC_LIB ${DYNAMIC_LIB} ${GLOG_LIB})
+
+if (NOT APPLE)
+    list(APPEND DYNAMIC_LIB rt)
 endif()
 
 # for *.so
@@ -276,13 +289,15 @@ set(MCPACK2PB_SOURCES
     ${CMAKE_SOURCE_DIR}/src/mcpack2pb/serializer.cpp
     )
 
+get_target_property(PROTOC_EXE protobuf::protoc IMPORTED_LOCATION_RELEASE)
+
 file(GLOB PROTOS "${CMAKE_SOURCE_DIR}/src/*.proto")
 list(APPEND PROTO_FLAGS -I${CMAKE_CURRENT_BINARY_DIR})
 foreach(PROTO ${PROTOS})
     get_filename_component(PROTO_WE ${PROTO} NAME_WE)
     list(APPEND PROTO_SRCS "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_WE}.pb.cc")
     execute_process(
-        COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${PROTO_FLAGS} --cpp_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path=${PROTOBUF_INCLUDE_DIR} --proto_path=${CMAKE_SOURCE_DIR}/src ${PROTO}
+        COMMAND ${PROTOC_EXE} ${PROTO_FLAGS} --cpp_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path=${PROTOBUF_INCLUDE_DIR} --proto_path=${CMAKE_SOURCE_DIR}/src ${PROTO}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
 endforeach()
@@ -292,7 +307,7 @@ foreach(PROTO ${BRPC_PROTOS})
     get_filename_component(PROTO_WE ${PROTO} NAME_WE)
     list(APPEND PROTO_SRCS "${CMAKE_CURRENT_BINARY_DIR}/brpc/${PROTO_WE}.pb.cc")
     execute_process(
-        COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${PROTO_FLAGS} --cpp_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path=${PROTOBUF_INCLUDE_DIR} --proto_path=${CMAKE_SOURCE_DIR}/src --proto_path=${CMAKE_SOURCE_DIR}/src/brpc/ ${PROTO}
+        COMMAND ${PROTOC_EXE} ${PROTO_FLAGS} --cpp_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path=${PROTOBUF_INCLUDE_DIR} --proto_path=${CMAKE_SOURCE_DIR}/src --proto_path=${CMAKE_SOURCE_DIR}/src/brpc/ ${PROTO}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
 endforeach()
@@ -302,7 +317,7 @@ foreach(PROTO ${BRPC_POLICY_PROTOS})
     get_filename_component(PROTO_WE ${PROTO} NAME_WE)
     list(APPEND PROTO_SRCS "${CMAKE_CURRENT_BINARY_DIR}/brpc/policy/${PROTO_WE}.pb.cc")
     execute_process(
-        COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${PROTO_FLAGS} --cpp_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path=${PROTOBUF_INCLUDE_DIR} --proto_path=${CMAKE_SOURCE_DIR}/src --proto_path=${CMAKE_SOURCE_DIR}/src/brpc/policy ${PROTO}
+        COMMAND ${PROTOC_EXE} ${PROTO_FLAGS} --cpp_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path=${PROTOBUF_INCLUDE_DIR} --proto_path=${CMAKE_SOURCE_DIR}/src --proto_path=${CMAKE_SOURCE_DIR}/src/brpc/policy ${PROTO}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
 endforeach()
@@ -320,13 +335,16 @@ add_subdirectory(src)
 if(BUILD_UNIT_TESTS)
     add_subdirectory(test)
 endif()
-add_subdirectory(tools)
+
+if (BRPC_BUILD_TOOLS)
+    add_subdirectory(tools)
+endif()
 
 file(COPY ${CMAKE_CURRENT_BINARY_DIR}/idl_options.pb.h
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/output/include)
 file(COPY ${CMAKE_CURRENT_BINARY_DIR}/brpc/
         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/output/include/brpc/
-        FILES_MATCHING 
+        FILES_MATCHING
         PATTERN "*.h"
         PATTERN "*.hpp"
         )
