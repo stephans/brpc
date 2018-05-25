@@ -133,8 +133,14 @@ if(NOT PROTOC_LIB)
     message(FATAL_ERROR "Fail to find protoc lib")
 endif()
 
-find_path(SSL_INCLUDE_PATH NAMES openssl/ssl.h)
-find_library(SSL_LIB NAMES ssl)
+find_path(SSL_INCLUDE_PATH
+    NAMES openssl/ssl.h
+    HINTS /usr/local/opt/openssl/include
+    )
+find_library(SSL_LIB
+    NAMES ssl
+    HINTS /usr/local/opt/openssl/lib
+    )
 if ((NOT SSL_INCLUDE_PATH) OR (NOT SSL_LIB))
     message(FATAL_ERROR "Fail to find ssl")
 endif()
