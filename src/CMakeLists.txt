@@ -6,12 +6,16 @@ elseif(NOT DEBUG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNDEBUG")
 endif()
 
-add_library(brpc-static STATIC ${SOURCES} ${BUTIL_SOURCES})
+add_library(brpc-static STATIC
+  ${SOURCES}
+  ${BUTIL_SOURCES}
+  )
 set_target_properties(brpc-static PROPERTIES POSITION_INDEPENDENT_CODE 1)
 
-target_include_directories(brpc-static PRIVATE
-  ${CMAKE_CURRENT_BINARY_DIR}
-  ${PROJECT_SOURCE_DIR}/src
+target_include_directories(brpc-static
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
+  PRIVATE ${PROJECT_SOURCE_DIR}/src
+  PUBLIC ${PROJECT_BINARY_DIR}/output/include
   )
 
 if(BRPC_WITH_THRIFT)
@@ -24,6 +28,7 @@ target_link_libraries(brpc-static PUBLIC
   leveldb::leveldb
   OpenSSL::SSL
   OpenSSL::Crypto
+  md5::md5
   )
 
 SET_TARGET_PROPERTIES(brpc-static PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPUT 1)

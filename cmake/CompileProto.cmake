@@ -7,6 +7,7 @@ function(compile_proto OUT_HDRS OUT_SRCS DESTDIR HDR_OUTPUT_DIR PROTO_DIR PROTO_
     set(SRC ${DESTDIR}/${SRC})
     list(APPEND HDRS ${HDR})
     list(APPEND SRCS ${SRC})
+    message("KWA Compiling ${P} => ${HDR} ${SRC}")
     add_custom_command(
       OUTPUT ${HDR} ${SRC}
       COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${PROTOC_FLAGS} -I${PROTO_DIR} --cpp_out=${DESTDIR} ${PROTO_DIR}/${P}

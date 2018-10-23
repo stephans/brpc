@@ -122,6 +122,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     endif()
 endif()
 
+hunter_add_package(md5)
+find_package(md5 CONFIG REQUIRED)
+
 hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
 
@@ -155,6 +158,7 @@ set(DYNAMIC_LIB
     OpenSSL::SSL
     OpenSSL::Crypto
     ZLIB::zlib
+    md5::md5
     )
 set(BRPC_PRIVATE_LIBS "")
 
@@ -341,9 +345,7 @@ set(MCPACK2PB_SOURCES
     )
 
 get_target_property(PROTOC_EXE protobuf::protoc IMPORTED_LOCATION_RELEASE)
-set(PROTOBUF_PROTOC_EXECUTABLE protobuf::protoc)
   
-include(CompileProto)
 set(PROTO_FILES idl_options.proto
                 brpc/rtmp.proto
                 brpc/rpc_dump.proto
@@ -362,12 +364,22 @@ set(PROTO_FILES idl_options.proto
                 brpc/trackme.proto
                 brpc/streaming_rpc_meta.proto)
 file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/output/include/brpc)
-set(PROTOC_FLAGS ${PROTOC_FLAGS} -I${PROTOBUF_INCLUDE_DIR})
-compile_proto(PROTO_HDRS PROTO_SRCS ${PROJECT_BINARY_DIR}
-                                    ${PROJECT_BINARY_DIR}/output/include
-                                    ${PROJECT_SOURCE_DIR}/src
-                                    "${PROTO_FILES}")
-add_library(PROTO_LIB OBJECT ${PROTO_SRCS} ${PROTO_HDRS})
+set(PROTOC_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(PROTO_SRCS)
+set(PROTO_HDRS)
+foreach(P ${PROTO_FILES})
+  string(REPLACE .proto .pb.h HDR ${P})
+  set(HDR_RELATIVE ${HDR})
+  set(HDR ${PROJECT_BINARY_DIR}/${HDR})
+  string(REPLACE .proto .pb.cc SRC ${P})
+  set(SRC ${PROJECT_BINARY_DIR}/${SRC})
+  list(APPEND PROTO_HDRS ${HDR})
+  list(APPEND PROTO_SRCS ${SRC})
+  execute_process(
+    COMMAND ${PROTOC_EXE} ${PROTOC_FLAGS} --cpp_out=${PROJECT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src/${P}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+endforeach()
 
 set(SOURCES
     ${BVAR_SOURCES}
@@ -376,6 +388,8 @@ set(SOURCES
     ${MCPACK2PB_SOURCES}
     ${BRPC_SOURCES}
     ${THRIFT_SOURCES}
+    ${PROTO_SRCS}
+    ${PROTO_HDRS}
     )
 
 add_subdirectory(src)
