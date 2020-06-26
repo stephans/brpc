@@ -21,7 +21,7 @@
 
 #include <google/protobuf/stubs/once.h>
 #include <google/protobuf/io/coded_stream.h>
-#include <google/protobuf/wire_format_lite_inl.h>
+#include <google/protobuf/wire_format_lite.h>
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/reflection_ops.h>
 #include <google/protobuf/wire_format.h>
@@ -48,10 +48,11 @@ void protobuf_AssignDesc_baidu_2frpc_2fserialized_5frequest_2eproto() {
 
 namespace {
 
-GOOGLE_PROTOBUF_DECLARE_ONCE(protobuf_AssignDescriptors_once_);
 inline void protobuf_AssignDescriptorsOnce() {
-    ::google::protobuf::GoogleOnceInit(&protobuf_AssignDescriptors_once_,
-                                       &protobuf_AssignDesc_baidu_2frpc_2fserialized_5frequest_2eproto);
+  static std::once_flag flag;
+  std::call_once(flag, []() {
+    protobuf_AssignDesc_baidu_2frpc_2fserialized_5frequest_2eproto();
+  });
 }
 
 void protobuf_RegisterTypes(const ::std::string&) {
@@ -75,8 +76,7 @@ void protobuf_AddDesc_baidu_2frpc_2fserialized_5frequest_2eproto() {
     ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
         "\n\"baidu/rpc/serialized_request.proto\022\tba"
         "idu.rpc\"\023\n\021SerializedRequest", 68);
-    ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
-        "baidu/rpc/serialized_request.proto", &protobuf_RegisterTypes);
+    protobuf_RegisterTypes("baidu/rpc/serialized_request.proto");
     SerializedRequest::default_instance_ = new SerializedRequest();
     SerializedRequest::default_instance_->InitAsDefaultInstance();
     ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_baidu_2frpc_2fserialized_5frequest_2eproto);
@@ -176,8 +176,7 @@ void SerializedRequest::MergeFrom(const SerializedRequest&) {
 
 void SerializedRequest::CopyFrom(const ::google::protobuf::Message& from) {
     if (&from == this) return;
-    const SerializedRequest* source =
-        ::google::protobuf::internal::dynamic_cast_if_available<const SerializedRequest*>(
+    const SerializedRequest* source = dynamic_cast<const SerializedRequest*>(
             &from);
     if (source == NULL) {
         CHECK(false) << "SerializedRequest can only CopyFrom SerializedRequest";

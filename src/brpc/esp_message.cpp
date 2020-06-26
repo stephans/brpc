@@ -21,7 +21,7 @@
 
 #include <google/protobuf/stubs/once.h>
 #include <google/protobuf/io/coded_stream.h>
-#include <google/protobuf/wire_format_lite_inl.h>
+#include <google/protobuf/wire_format_lite.h>
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/reflection_ops.h>
 #include <google/protobuf/wire_format.h>
@@ -47,14 +47,16 @@ void protobuf_AssignDesc_esp_5fmessage_2eproto() {
 
 namespace {
 
-GOOGLE_PROTOBUF_DECLARE_ONCE(protobuf_AssignDescriptors_once_);
+//GOOGLE_PROTOBUF_DECLARE_ONCE(protobuf_AssignDescriptors_once_);
 inline void protobuf_AssignDescriptorsOnce() {
-    ::google::protobuf::GoogleOnceInit(&protobuf_AssignDescriptors_once_,
-            &protobuf_AssignDesc_esp_5fmessage_2eproto);
+    //::google::protobuf::GoogleOnceInit(&protobuf_AssignDescriptors_once_,
+      //      &protobuf_AssignDesc_esp_5fmessage_2eproto);
+    protobuf_AssignDesc_esp_5fmessage_2eproto();
 }
 
 void protobuf_RegisterTypes(const ::std::string&) {
-    protobuf_AssignDescriptorsOnce();
+  static std::once_flag flag;
+  std::call_once(flag, &protobuf_AssignDescriptorsOnce);
     ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
             EspMessage_descriptor_, &EspMessage::default_instance());
 }
@@ -77,8 +79,7 @@ void protobuf_AddDesc_esp_5fmessage_2eproto() {
 
     ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
             "\n\021esp_message.proto\022\tbaidu.rpc\"\014\n\nEspMessage", 44);
-    ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
-            "esp_message.proto", &protobuf_RegisterTypes);
+    protobuf_RegisterTypes("esp_message.proto");
     EspMessage::default_instance_ = new EspMessage();
     EspMessage::default_instance_->InitAsDefaultInstance();
     ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_esp_5fmessage_2eproto);
@@ -178,9 +179,7 @@ int EspMessage::ByteSize() const {
 
 void EspMessage::MergeFrom(const ::google::protobuf::Message& from) {
     GOOGLE_CHECK_NE(&from, this);
-    const EspMessage* source =
-        ::google::protobuf::internal::dynamic_cast_if_available<const EspMessage*>(
-                &from);
+    const EspMessage* source = dynamic_cast<const EspMessage*>(&from);
 
     if (source == NULL) {
         ::google::protobuf::internal::ReflectionOps::Merge(from, this);

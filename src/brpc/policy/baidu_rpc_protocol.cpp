@@ -69,7 +69,7 @@ inline void PackRpcHeader(char* rpc_header, int meta_size, int payload_size) {
 
 static void SerializeRpcHeaderAndMeta(
     butil::IOBuf* out, const RpcMeta& meta, int payload_size) {
-    const int meta_size = meta.ByteSize();
+    const int meta_size = meta.ByteSizeLong();
     if (meta_size <= 244) { // most common cases
         char header_and_meta[12 + meta_size];
         PackRpcHeader(header_and_meta, meta_size, payload_size);
@@ -318,12 +318,12 @@ void ProcessRpcRequest(InputMessageBase* msg_base) {
 
     SampledRequest* sample = AskToBeSampled();
     if (sample) {
-        sample->set_service_name(request_meta.service_name());
-        sample->set_method_name(request_meta.method_name());
-        sample->set_compress_type((CompressType)meta.compress_type());
-        sample->set_protocol_type(PROTOCOL_BAIDU_STD);
-        sample->set_attachment_size(meta.attachment_size());
-        sample->set_authentication_data(meta.authentication_data());
+        sample->rpc_dump_meta.set_service_name(request_meta.service_name());
+        sample->rpc_dump_meta.set_method_name(request_meta.method_name());
+        sample->rpc_dump_meta.set_compress_type((CompressType)meta.compress_type());
+        sample->rpc_dump_meta.set_protocol_type(PROTOCOL_BAIDU_STD);
+        sample->rpc_dump_meta.set_attachment_size(meta.attachment_size());
+        sample->rpc_dump_meta.set_authentication_data(meta.authentication_data());
         sample->request = msg->payload;
         sample->submit(start_parse_us);
     }

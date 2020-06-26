@@ -240,7 +240,7 @@ bool RpcDumpContext::Serialize(butil::IOBuf& buf, SampledRequest* sample) {
     
     const size_t starting_size = buf.size();
     butil::IOBufAsZeroCopyOutputStream buf_stream(&buf);
-    if (!sample->SerializeToZeroCopyStream(&buf_stream)) {
+    if (!sample->rpc_dump_meta.SerializeToZeroCopyStream(&buf_stream)) {
         LOG(ERROR) << "Fail to serialize";
         return false;
     }
@@ -349,14 +349,15 @@ SampledRequest* SampleIterator::Pop(butil::IOBuf& buf, bool* format_error) {
     buf.pop_front(sizeof(backing_buf));
     butil::IOBuf meta_buf;
     buf.cutn(&meta_buf, meta_size);
-    std::unique_ptr<SampledRequest> req(new SampledRequest);
-    if (!ParsePbFromIOBuf(req.get(), meta_buf)) {
+    RpcDumpMeta req;
+    if (!ParsePbFromIOBuf(&req, meta_buf)) {
         LOG(ERROR) << "Fail to parse RpcDumpMeta";
         *format_error = true;
         return NULL;
     }
-    buf.cutn(&req->request, body_size - meta_size);
-    return req.release();
+    auto r = std::unique_ptr<SampledRequest>(new SampledRequest{std::move(req)});
+    buf.cutn(&r->request, body_size - meta_size);
+    return r.release();
 }
 
 #undef DUMPED_FILE_PREFIX

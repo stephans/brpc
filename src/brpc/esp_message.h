@@ -22,6 +22,7 @@
 #include <google/protobuf/repeated_field.h>
 #include <google/protobuf/extension_set.h>
 #include <google/protobuf/generated_message_reflection.h>
+#include <google/protobuf/message.h>
 
 #include "brpc/esp_head.h"
 #include "butil/iobuf.h"       

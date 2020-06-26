@@ -46,17 +46,23 @@ DECLARE_bool(rpc_dump);
 // In practice, sampled requests are just small fraction of all requests.
 // The overhead of sampling should be negligible for overall performance.
 
-struct SampledRequest : public bvar::Collected
-                      , public RpcDumpMeta {
+struct SampledRequest : public bvar::Collected {
+    explicit SampledRequest(RpcDumpMeta rpc_dump_meta)
+        : rpc_dump_meta{std::move(rpc_dump_meta)}
+    {
+    }
+
     butil::IOBuf request;
 
     // Implement methods of Sampled.
-    void dump_and_destroy(size_t round);
-    void destroy();
-    bvar::CollectorSpeedLimit* speed_limit() {
+    void dump_and_destroy(size_t round) override;
+    void destroy() override;
+    bvar::CollectorSpeedLimit* speed_limit() override {
         extern bvar::CollectorSpeedLimit g_rpc_dump_sl;
         return &g_rpc_dump_sl;
     }
+
+    RpcDumpMeta rpc_dump_meta;
 };
 
 // If this function returns non-NULL, the caller must fill the returned
@@ -67,7 +73,7 @@ inline SampledRequest* AskToBeSampled() {
     if (!FLAGS_rpc_dump || !bvar::is_collectable(&g_rpc_dump_sl)) {
         return NULL;
     }
-    return new (std::nothrow) SampledRequest;
+    return new (std::nothrow) SampledRequest{RpcDumpMeta{}};
 }
 
 // Read samples from dumped files in a directory.

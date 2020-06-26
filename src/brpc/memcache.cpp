@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <google/protobuf/stubs/once.h>
 #include <google/protobuf/io/coded_stream.h>
-#include <google/protobuf/wire_format_lite_inl.h>
+#include <google/protobuf/wire_format_lite.h>
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/reflection_ops.h>
 #include <google/protobuf/wire_format.h>
@@ -57,10 +57,11 @@ void protobuf_AssignDesc_baidu_2frpc_2fmemcache_5fbase_2eproto() {
 
 namespace {
 
-GOOGLE_PROTOBUF_DECLARE_ONCE(protobuf_AssignDescriptors_once_);
 inline void protobuf_AssignDescriptorsOnce() {
-    ::google::protobuf::GoogleOnceInit(&protobuf_AssignDescriptors_once_,
-                                       &protobuf_AssignDesc_baidu_2frpc_2fmemcache_5fbase_2eproto);
+  static std::once_flag flag;
+  std::call_once(flag, []() {
+    protobuf_AssignDesc_baidu_2frpc_2fmemcache_5fbase_2eproto();
+  });
 }
 
 void protobuf_RegisterTypes(const ::std::string&) {
@@ -90,8 +91,7 @@ void protobuf_AddDesc_baidu_2frpc_2fmemcache_5fbase_2eproto_impl() {
         "\n\035baidu/rpc/memcache_base.proto\022\tbaidu.r"
         "pc\032 google/protobuf/descriptor.proto\"\021\n\017"
         "MemcacheRequest\"\022\n\020MemcacheResponseB\003\200\001\001", 120);
-    ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
-        "baidu/rpc/memcache_base.proto", &protobuf_RegisterTypes);
+    protobuf_RegisterTypes("baidu/rpc/memcache_base.proto");
     MemcacheRequest::default_instance_ = new MemcacheRequest();
     MemcacheResponse::default_instance_ = new MemcacheResponse();
     MemcacheRequest::default_instance_->InitAsDefaultInstance();
@@ -99,11 +99,11 @@ void protobuf_AddDesc_baidu_2frpc_2fmemcache_5fbase_2eproto_impl() {
     ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_baidu_2frpc_2fmemcache_5fbase_2eproto);
 }
 
-GOOGLE_PROTOBUF_DECLARE_ONCE(protobuf_AddDesc_baidu_2frpc_2fmemcache_5fbase_2eproto_once);
 void protobuf_AddDesc_baidu_2frpc_2fmemcache_5fbase_2eproto() {
-    ::google::protobuf::GoogleOnceInit(
-        &protobuf_AddDesc_baidu_2frpc_2fmemcache_5fbase_2eproto_once,
-        &protobuf_AddDesc_baidu_2frpc_2fmemcache_5fbase_2eproto_impl);
+  static std::once_flag flag;
+  std::call_once(flag, []() {
+    protobuf_AddDesc_baidu_2frpc_2fmemcache_5fbase_2eproto_impl();
+  });
 }
 
 // Force AddDescriptors() to be called at static initialization time.
@@ -148,9 +148,9 @@ void MemcacheRequest::SharedDtor() {
 }
 
 void MemcacheRequest::SetCachedSize(int size) const {
-    GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+    //GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
     _cached_size_ = size;
-    GOOGLE_SAFE_CONCURRENT_WRITES_END();
+    //GOOGLE_SAFE_CONCURRENT_WRITES_END();
 }
 const ::google::protobuf::Descriptor* MemcacheRequest::descriptor() {
     protobuf_AssignDescriptorsOnce();
@@ -230,16 +230,15 @@ void MemcacheRequest::SerializeWithCachedSizes(
 
 int MemcacheRequest::ByteSize() const {
     int total_size =  _buf.size();
-    GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+    //GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
     _cached_size_ = total_size;
-    GOOGLE_SAFE_CONCURRENT_WRITES_END();
+    //GOOGLE_SAFE_CONCURRENT_WRITES_END();
     return total_size;
 }
 
 void MemcacheRequest::MergeFrom(const ::google::protobuf::Message& from) {
     GOOGLE_CHECK_NE(&from, this);
-    const MemcacheRequest* source =
-        ::google::protobuf::internal::dynamic_cast_if_available<const MemcacheRequest*>(&from);
+    const MemcacheRequest* source = dynamic_cast<const MemcacheRequest*>(&from);
     if (source == NULL) {
         ::google::protobuf::internal::ReflectionOps::Merge(from, this);
     } else {
@@ -318,9 +317,9 @@ void MemcacheResponse::SharedDtor() {
 }
 
 void MemcacheResponse::SetCachedSize(int size) const {
-    GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+    //GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
     _cached_size_ = size;
-    GOOGLE_SAFE_CONCURRENT_WRITES_END();
+    //GOOGLE_SAFE_CONCURRENT_WRITES_END();
 }
 const ::google::protobuf::Descriptor* MemcacheResponse::descriptor() {
     protobuf_AssignDescriptorsOnce();
@@ -377,16 +376,16 @@ void MemcacheResponse::SerializeWithCachedSizes(
 
 int MemcacheResponse::ByteSize() const {
     int total_size = _buf.size();
-    GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+    //GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
     _cached_size_ = total_size;
-    GOOGLE_SAFE_CONCURRENT_WRITES_END();
+    //GOOGLE_SAFE_CONCURRENT_WRITES_END();
     return total_size;
 }
 
 void MemcacheResponse::MergeFrom(const ::google::protobuf::Message& from) {
     GOOGLE_CHECK_NE(&from, this);
     const MemcacheResponse* source =
-        ::google::protobuf::internal::dynamic_cast_if_available<const MemcacheResponse*>(&from);
+        dynamic_cast<const MemcacheResponse*>(&from);
     if (source == NULL) {
         ::google::protobuf::internal::ReflectionOps::Merge(from, this);
     } else {

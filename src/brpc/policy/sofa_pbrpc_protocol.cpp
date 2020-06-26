@@ -138,7 +138,7 @@ inline void PackSofaHeader(char* sofa_header, int meta_size, int body_size) {
 
 static void SerializeSofaHeaderAndMeta(
     butil::IOBuf* out, const SofaRpcMeta& meta, int payload_size) {
-    const int meta_size = meta.ByteSize();
+    const int meta_size = meta.ByteSizeLong();
     if (meta_size <= 232) { // most common cases
         char header_and_meta[24 + meta_size];
         PackSofaHeader(header_and_meta, meta_size, payload_size);
@@ -323,9 +323,9 @@ void ProcessSofaRequest(InputMessageBase* msg_base) {
 
     SampledRequest* sample = AskToBeSampled();
     if (sample) {
-        sample->set_method_name(meta.method());
-        sample->set_compress_type(req_cmp_type);
-        sample->set_protocol_type(PROTOCOL_SOFA_PBRPC);
+        sample->rpc_dump_meta.set_method_name(meta.method());
+        sample->rpc_dump_meta.set_compress_type(req_cmp_type);
+        sample->rpc_dump_meta.set_protocol_type(PROTOCOL_SOFA_PBRPC);
         sample->request = msg->payload;
         sample->submit(start_parse_us);
     }

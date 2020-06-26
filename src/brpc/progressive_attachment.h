@@ -24,6 +24,8 @@
 #include "brpc/socket_id.h"       // SocketUniquePtr
 #include "brpc/shared_object.h"   // SharedObject
 
+#include <google/protobuf/stubs/callback.h>
+
 
 namespace brpc {
 

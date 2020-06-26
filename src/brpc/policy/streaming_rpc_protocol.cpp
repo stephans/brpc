@@ -41,13 +41,13 @@ void PackStreamMessage(butil::IOBuf* out,
                        const StreamFrameMeta &fm,
                        const butil::IOBuf *data) {
     const uint32_t data_length = data ? data->length() : 0;
-    const uint32_t meta_length = fm.ByteSize();
+    const size_t meta_length = fm.ByteSizeLong();
     char head[12];
     // dummy supresses strict-aliasing warning.
     uint32_t* dummy = (uint32_t*)head;
     *(uint32_t*)dummy = *(const uint32_t*)"STRM";
     butil::RawPacker(head + 4)
-        .pack32(data_length + meta_length)
+        .pack32(data_length + static_cast<uint32_t>(meta_length))
         .pack32(meta_length);
     out->append(head, ARRAY_SIZE(head));
     butil::IOBufAsZeroCopyOutputStream wrapper(out);
