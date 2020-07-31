@@ -9,12 +9,24 @@ HunterGate(
 
 project(brpc)
 
+option(WITH_GLOG "With glog" OFF)
+option(WITH_MESALINK "With MesaLink" OFF)
+option(DEBUG "Print debug logs" OFF)
+option(WITH_DEBUG_SYMBOLS "With debug symbols" ON)
+option(WITH_THRIFT "With thrift framed protocol supported" OFF)
+option(BUILD_UNIT_TESTS "Whether to build unit tests" OFF)
+option(DOWNLOAD_GTEST "Download and build a fresh copy of googletest. Requires Internet access." ON)
+
 # Enable MACOSX_RPATH. Run "cmake --help-policy CMP0042" for policy details.
 if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif()
 
 set(BRPC_VERSION 0.9.0)
+
+SET(CPACK_GENERATOR "DEB")
+SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "brpc authors")
+INCLUDE(CPack)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # require at least gcc 4.8
@@ -41,6 +53,7 @@ option(BRPC_BUILD_TOOLS "Build brpc tools used for debugging" OFF)
 set(WITH_GLOG_VAL "0")
 if(WITH_GLOG)
     set(WITH_GLOG_VAL "1")
+    set(BRPC_WITH_GLOG 1)
 endif()
 
 if(WITH_DEBUG_SYMBOLS)
@@ -49,7 +62,6 @@ endif()
 
 if(WITH_THRIFT)
     set(THRIFT_CPP_FLAG "-DENABLE_THRIFT_FRAMED_PROTOCOL")
-    set(THRIFTNB_LIB "thriftnb")
     set(THRIFT_LIB "thrift")
 endif()
 
@@ -78,7 +90,7 @@ include_directories(
 )
 
 execute_process(
-    COMMAND bash -c "git rev-parse --short HEAD | tr -d '\n'"
+    COMMAND bash -c "${PROJECT_SOURCE_DIR}/tools/get_brpc_revision.sh ${PROJECT_SOURCE_DIR} | tr -d '\n'"
     OUTPUT_VARIABLE BRPC_REVISION
 )
 
@@ -91,6 +103,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
 endif()
 
 set(CMAKE_CPP_FLAGS "${DEFINE_CLOCK_GETTIME} -DBRPC_WITH_GLOG=${WITH_GLOG_VAL} -DGFLAGS_NS=${GFLAGS_NS}")
+if(WITH_MESALINK)
+    set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -DUSE_MESALINK")
+endif()
 set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} -DBTHREAD_USE_FAST_PTHREAD_MUTEX -D__const__= -D_GNU_SOURCE -DUSE_SYMBOLIZE -DNO_TCMALLOC -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -DBRPC_REVISION=\\\"${BRPC_REVISION}\\\" -D__STRICT_ANSI__")
 set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} ${DEBUG_SYMBOL} ${THRIFT_CPP_FLAG}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CPP_FLAGS} -O2 -pipe -Wall -W -fPIC -fstrict-aliasing -Wno-invalid-offsetof -Wno-unused-parameter -fno-omit-frame-pointer")
@@ -114,8 +129,11 @@ use_cxx11()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     #required by butil/crc32.cc to boost performance for 10x
-    if(NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.4))
+    if((CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)") AND NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.4))
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4 -msse4.2")
+    elseif((CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64"))
+        # segmentation fault in libcontext
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-gcse")
     endif()
     if(NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0))
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-aligned-new")
@@ -143,6 +161,17 @@ include(FindThreads)
 if(WITH_GLOG)
     hunter_add_package(glog)
     find_package(glog CONFIG REQUIRED)
+endif()
+
+if(WITH_MESALINK)
+    find_path(MESALINK_INCLUDE_PATH NAMES mesalink/openssl/ssl.h)
+    find_library(MESALINK_LIB NAMES mesalink)
+    if((NOT MESALINK_INCLUDE_PATH) OR (NOT MESALINK_LIB))
+        message(FATAL_ERROR "Fail to find MesaLink")
+    else()
+        message(STATUS "Found MesaLink: ${MESALINK_LIB}")
+    endif()
+    include_directories(${MESALINK_INCLUDE_PATH})
 endif()
 
 find_library(PROTOC_LIB NAMES protoc)
@@ -188,7 +217,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/output/lib)
 # for *.a
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/output/lib)
 
-# list all source files
+# the reason why not using file(GLOB_RECURSE...) is that we want to
+# include different files on different platforms.
 set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/third_party/dmg_fp/g_fmt.cc
     ${PROJECT_SOURCE_DIR}/src/butil/third_party/dmg_fp/dtoa_wrapper.cc
@@ -196,7 +226,6 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/third_party/icu/icu_utf.cc
     ${PROJECT_SOURCE_DIR}/src/butil/third_party/superfasthash/superfasthash.c
     ${PROJECT_SOURCE_DIR}/src/butil/third_party/modp_b64/modp_b64.cc
-    ${PROJECT_SOURCE_DIR}/src/butil/third_party/nspr/prtime.cc
     ${PROJECT_SOURCE_DIR}/src/butil/third_party/symbolize/demangle.cc
     ${PROJECT_SOURCE_DIR}/src/butil/third_party/symbolize/symbolize.cc
     ${PROJECT_SOURCE_DIR}/src/butil/third_party/snappy/snappy-sinksource.cc
@@ -236,7 +265,6 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/hash.cc
     ${PROJECT_SOURCE_DIR}/src/butil/lazy_instance.cc
     ${PROJECT_SOURCE_DIR}/src/butil/location.cc
-    ${PROJECT_SOURCE_DIR}/src/butil/md5.cc
     ${PROJECT_SOURCE_DIR}/src/butil/memory/aligned_memory.cc
     ${PROJECT_SOURCE_DIR}/src/butil/memory/ref_counted.cc
     ${PROJECT_SOURCE_DIR}/src/butil/memory/ref_counted_memory.cc
@@ -302,6 +330,7 @@ set(BUTIL_SOURCES
     ${PROJECT_SOURCE_DIR}/src/butil/containers/case_ignored_flat_map.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/iobuf.cpp
     ${PROJECT_SOURCE_DIR}/src/butil/binary_printer.cpp
+    ${PROJECT_SOURCE_DIR}/src/butil/recordio.cc
     ${PROJECT_SOURCE_DIR}/src/butil/popen.cpp
     )
 
@@ -325,7 +354,7 @@ file(GLOB_RECURSE BVAR_SOURCES "${PROJECT_SOURCE_DIR}/src/bvar/*.cpp")
 file(GLOB_RECURSE BTHREAD_SOURCES "${PROJECT_SOURCE_DIR}/src/bthread/*.cpp")
 file(GLOB_RECURSE JSON2PB_SOURCES "${PROJECT_SOURCE_DIR}/src/json2pb/*.cpp")
 file(GLOB_RECURSE BRPC_SOURCES "${PROJECT_SOURCE_DIR}/src/brpc/*.cpp")
-file(GLOB_RECURSE THRIFT_SOURCES "thrift*.cpp")
+file(GLOB_RECURSE THRIFT_SOURCES "${PROJECT_SOURCE_DIR}/src/brpc/thrift*.cpp")
 
 if(WITH_THRIFT)
     message("brpc compile with thrift proctol")
@@ -341,8 +370,7 @@ set(MCPACK2PB_SOURCES
     ${PROJECT_SOURCE_DIR}/src/mcpack2pb/field_type.cpp
     ${PROJECT_SOURCE_DIR}/src/mcpack2pb/mcpack2pb.cpp
     ${PROJECT_SOURCE_DIR}/src/mcpack2pb/parser.cpp
-    ${PROJECT_SOURCE_DIR}/src/mcpack2pb/serializer.cpp
-    )
+    ${PROJECT_SOURCE_DIR}/src/mcpack2pb/serializer.cpp)
 
 get_target_property(PROTOC_EXE protobuf::protoc IMPORTED_LOCATION_RELEASE)
   
@@ -362,7 +390,8 @@ set(PROTO_FILES idl_options.proto
                 brpc/policy/sofa_pbrpc_meta.proto
                 brpc/policy/mongo.proto
                 brpc/trackme.proto
-                brpc/streaming_rpc_meta.proto)
+                brpc/streaming_rpc_meta.proto
+                brpc/proto_base.proto)
 file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/output/include/brpc)
 set(PROTOC_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(PROTO_SRCS)
@@ -394,6 +423,7 @@ set(SOURCES
 
 add_subdirectory(src)
 if(BUILD_UNIT_TESTS)
+    enable_testing()
     add_subdirectory(test)
 endif()
 

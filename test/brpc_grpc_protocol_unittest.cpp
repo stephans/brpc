@@ -1,18 +1,20 @@
-// Copyright (c) 2018 brpc authors.
-// 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-//     http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
-// Authors: Jiashun Zhu(zhujiashun@bilibili.com)
 
 #include <gtest/gtest.h>
 #include <gflags/gflags.h>
@@ -20,6 +22,7 @@
 #include "brpc/server.h"
 #include "brpc/channel.h"
 #include "brpc/grpc.h"
+#include "butil/time.h"
 #include "grpc.pb.h"
 
 int main(int argc, char* argv[]) {
@@ -64,6 +67,14 @@ public:
             cntl->SetFailed(brpc::EINTERNAL, "%s", g_prefix.c_str());
             return;
         }
+        if (req->has_timeout_us()) {
+            if (req->timeout_us() < 0) {
+                EXPECT_EQ(-1, cntl->deadline_us());
+            } else {
+                EXPECT_NEAR(cntl->deadline_us(),
+                    butil::gettimeofday_us() + req->timeout_us(), 5000);
+            }
+        }
     }
 
     void MethodTimeOut(::google::protobuf::RpcController* cntl_base,
@@ -76,7 +87,6 @@ public:
         return;
     }
 };
-
 
 class GrpcTest : public ::testing::Test {
 protected:
@@ -196,6 +206,70 @@ TEST_F(GrpcTest, MethodNotExist) {
     EXPECT_TRUE(cntl.Failed());
     EXPECT_EQ(cntl.ErrorCode(), brpc::EINTERNAL);
     ASSERT_TRUE(butil::StringPiece(cntl.ErrorText()).ends_with("Method MethodNotExist() not implemented."));
+}
+
+TEST_F(GrpcTest, GrpcTimeOut) {
+    const char* timeouts[] = {
+        // valid case
+        "2H", "7200000000",
+        "3M", "180000000",
+        "+1S", "1000000",
+        "4m", "4000",
+        "5u", "5",
+        "6n", "1",
+        // invalid case
+        "30A", "-1",
+        "123ASH", "-1",
+        "HHHH", "-1",
+        "112", "-1",
+        "H999m", "-1",
+        "", "-1"
+    };
+
+    // test all timeout format
+    for (size_t i = 0; i < arraysize(timeouts); i = i + 2) {
+        test::GrpcRequest req;
+        test::GrpcResponse res;
+        brpc::Controller cntl;
+        req.set_message(g_req);
+        req.set_gzip(false);
+        req.set_return_error(false);
+        req.set_timeout_us((int64_t)(strtol(timeouts[i+1], NULL, 10)));
+        cntl.set_timeout_ms(-1);
+        cntl.http_request().SetHeader("grpc-timeout", timeouts[i]);
+        test::GrpcService_Stub stub(&_channel);
+        stub.Method(&cntl, &req, &res, NULL);
+        EXPECT_FALSE(cntl.Failed());
+    }
+
+    // test timeout by using timeout_ms in cntl
+    {
+        test::GrpcRequest req;
+        test::GrpcResponse res;
+        brpc::Controller cntl;
+        req.set_message(g_req);
+        req.set_gzip(false);
+        req.set_return_error(false);
+        req.set_timeout_us(9876000);
+        cntl.set_timeout_ms(9876);
+        test::GrpcService_Stub stub(&_channel);
+        stub.Method(&cntl, &req, &res, NULL);
+        EXPECT_FALSE(cntl.Failed());
+    }
+
+    // test timeout by using timeout_ms in channel
+    {
+        test::GrpcRequest req;
+        test::GrpcResponse res;
+        brpc::Controller cntl;
+        req.set_message(g_req);
+        req.set_gzip(false);
+        req.set_return_error(false);
+        req.set_timeout_us(g_timeout_ms * 1000);
+        test::GrpcService_Stub stub(&_channel);
+        stub.Method(&cntl, &req, &res, NULL);
+        EXPECT_FALSE(cntl.Failed());
+    }
 }
 
 } // namespace 

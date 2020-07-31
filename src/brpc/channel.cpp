@@ -1,20 +1,20 @@
-// Copyright (c) 2014 Baidu, Inc.
-// 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-//     http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
-// Authors: Ge,Jun (gejun@baidu.com)
-//          Rujie Jiang(jiangrujie@baidu.com)
-//          Zhangyi Chen(chenzhangyi01@baidu.com)
 
 #include <inttypes.h>
 #include <google/protobuf/descriptor.h>
@@ -493,12 +493,12 @@ void Channel::CallMethod(const google::protobuf::MethodDescriptor* method,
         // Setup timer for backup request. When it occurs, we'll setup a
         // timer of timeout_ms before sending backup request.
 
-        // _abstime_us is for truncating _connect_timeout_ms and resetting
+        // _deadline_us is for truncating _connect_timeout_ms and resetting
         // timer when EBACKUPREQUEST occurs.
         if (cntl->timeout_ms() < 0) {
-            cntl->_abstime_us = -1;
+            cntl->_deadline_us = -1;
         } else {
-            cntl->_abstime_us = cntl->timeout_ms() * 1000L + start_send_real_us;
+            cntl->_deadline_us = cntl->timeout_ms() * 1000L + start_send_real_us;
         }
         const int rc = bthread_timer_add(
             &cntl->_timeout_id,
@@ -512,18 +512,18 @@ void Channel::CallMethod(const google::protobuf::MethodDescriptor* method,
     } else if (cntl->timeout_ms() >= 0) {
         // Setup timer for RPC timetout
 
-        // _abstime_us is for truncating _connect_timeout_ms
-        cntl->_abstime_us = cntl->timeout_ms() * 1000L + start_send_real_us;
+        // _deadline_us is for truncating _connect_timeout_ms
+        cntl->_deadline_us = cntl->timeout_ms() * 1000L + start_send_real_us;
         const int rc = bthread_timer_add(
             &cntl->_timeout_id,
-            butil::microseconds_to_timespec(cntl->_abstime_us),
+            butil::microseconds_to_timespec(cntl->_deadline_us),
             HandleTimeout, (void*)correlation_id.value);
         if (BAIDU_UNLIKELY(rc != 0)) {
             cntl->SetFailed(rc, "Fail to add timer for timeout");
             return cntl->HandleSendFailed();
         }
     } else {
-        cntl->_abstime_us = -1;
+        cntl->_deadline_us = -1;
     }
 
     cntl->IssueRPC(start_send_real_us);
@@ -556,7 +556,7 @@ int Channel::Weight() {
 int Channel::CheckHealth() {
     if (_lb == NULL) {
         SocketUniquePtr ptr;
-        if (Socket::Address(_server_id, &ptr) == 0) {
+        if (Socket::Address(_server_id, &ptr) == 0 && ptr->IsAvailable()) {
             return 0;
         }
         return -1;

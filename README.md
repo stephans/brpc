@@ -1,6 +1,6 @@
 [中文版](README_cn.md)
 
-[![Build Status](https://travis-ci.org/brpc/brpc.svg?branch=master)](https://travis-ci.org/brpc/brpc)
+[![Build Status](https://travis-ci.org/apache/incubator-brpc.svg?branch=master)](https://travis-ci.org/apache/incubator-brpc)
 
 # ![brpc](docs/images/logo.png)
 
@@ -101,5 +101,6 @@ You can use it to:
 # Contribute code
 Please refer to [here](CONTRIBUTING.md).
 
-# Feedback
-Please report bugs, concerns, suggestions by issues, or join QQ-group 498837325 to discuss problems around source code.
+# Feedback and Getting involved
+* Report bugs, ask questions or give suggestions by [Github Issues](https://github.com/apache/incubator-brpc/issues)
+* Subscribe mailing list(dev-subscribe@brpc.apache.org) to get updated with the project

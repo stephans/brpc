@@ -1,23 +1,23 @@
-// Copyright (c) 2014 Baidu, Inc.
-// 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-//     http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
-// Authors: Ge,Jun (gejun@baidu.com)
-//          Rujie Jiang(jiangrujie@baidu.com)
-//          Zhangyi Chen(chenzhangyi01@baidu.com)
 
 #include <signal.h>
-#include <openssl/md5.h>  
+#include <openssl/md5.h>
 #include <google/protobuf/descriptor.h>
 #include <gflags/gflags.h>
 #include "bthread/bthread.h"
@@ -41,7 +41,7 @@
 #include "brpc/retry_policy.h"
 #include "brpc/stream_impl.h"
 #include "brpc/policy/streaming_rpc_protocol.h" // FIXME
-#include "brpc/rpc_dump.pb.h"
+#include "brpc/rpc_dump.h"
 #include "brpc/details/usercode_backup_pool.h"  // RunUserCode
 #include "brpc/mongo_service_adaptor.h"
 
@@ -159,7 +159,7 @@ void Controller::ResetNonPods() {
         _server->_session_local_data_pool->Return(_session_local_data);
     }
     _mongo_session_data.reset();
-    delete _rpc_dump_meta;
+    delete _sampled_request;
 
     if (!is_used_by_rpc() && _correlation_id != INVALID_BTHREAD_ID) {
         CHECK_NE(EPERM, bthread_id_cancel(_correlation_id));
@@ -213,7 +213,7 @@ void Controller::ResetPods() {
     _server = NULL;
     _oncancel_id = INVALID_BTHREAD_ID;
     _auth_context = NULL;
-    _rpc_dump_meta = NULL;
+    _sampled_request = NULL;
     _request_protocol = PROTOCOL_UNKNOWN;
     _max_retry = UNSET_MAGIC_NUM;
     _retry_policy = NULL;
@@ -222,7 +222,7 @@ void Controller::ResetPods() {
     _timeout_ms = UNSET_MAGIC_NUM;
     _backup_request_ms = UNSET_MAGIC_NUM;
     _connect_timeout_ms = UNSET_MAGIC_NUM;
-    _abstime_us = -1;
+    _deadline_us = -1;
     _timeout_id = 0;
     _begin_time_us = 0;
     _end_time_us = 0;
@@ -257,6 +257,7 @@ void Controller::ResetPods() {
 Controller::Call::Call(Controller::Call* rhs)
     : nretry(rhs->nretry)
     , need_feedback(rhs->need_feedback)
+    , enable_circuit_breaker(rhs->enable_circuit_breaker)
     , peer_id(rhs->peer_id)
     , begin_time_us(rhs->begin_time_us)
     , sending_sock(rhs->sending_sock.release())
@@ -345,7 +346,7 @@ void Controller::AppendServerIdentiy() {
         _error_text.reserve(_error_text.size() + MD5_DIGEST_LENGTH * 2 + 2);
         _error_text.push_back('[');
         char ipbuf[64];
-        int len = snprintf(ipbuf, sizeof(ipbuf), "%s:%d", 
+        int len = snprintf(ipbuf, sizeof(ipbuf), "%s:%d",
                            butil::my_ip_cstr(), _server->listen_address().port);
         unsigned char digest[MD5_DIGEST_LENGTH];
         MD5((const unsigned char*)ipbuf, len, digest);
@@ -504,7 +505,7 @@ void Controller::NotifyOnCancel(google::protobuf::Closure* callback) {
         LOG(WARNING) << "Parameter `callback' is NLLL";
         return;
     }
-    
+
     ClosureGuard guard(callback);
     if (_oncancel_id != INVALID_BTHREAD_ID) {
         LOG(FATAL) << "NotifyCancel a single call more than once!";
@@ -568,7 +569,7 @@ void Controller::OnVersionedRPCReturned(const CompletionInfo& info,
         if (timeout_ms() >= 0) {
             rc = bthread_timer_add(
                     &_timeout_id,
-                    butil::microseconds_to_timespec(_abstime_us),
+                    butil::microseconds_to_timespec(_deadline_us),
                     HandleTimeout, (void*)_correlation_id.value);
         }
         if (rc != 0) {
@@ -624,7 +625,7 @@ void Controller::OnVersionedRPCReturned(const CompletionInfo& info,
         response_attachment().clear();
         return IssueRPC(butil::gettimeofday_us());
     }
-    
+
 END_OF_RPC:
     if (new_bthread) {
         // [ Essential for -usercode_in_pthread=true ]
@@ -690,12 +691,28 @@ inline bool does_error_affect_main_socket(int error_code) {
         error_code == EINVAL/*returned by connect "0.0.0.1"*/;
 }
 
-//Note: A RPC call is probably consisted by serveral individual Calls such as
+//Note: A RPC call is probably consisted by several individual Calls such as
 //      retries and backup requests. This method simply cares about the error of
 //      this very Call (specified by |error_code|) rather than the error of the
 //      entire RPC (specified by c->FailedInline()).
 void Controller::Call::OnComplete(
         Controller* c, int error_code/*note*/, bool responded, bool end_of_rpc) {
+    if (stream_user_data) {
+        stream_user_data->DestroyStreamUserData(sending_sock, c, error_code, end_of_rpc);
+        stream_user_data = NULL;
+    }
+
+    if (sending_sock != NULL) {
+        if (error_code != 0) {
+            sending_sock->AddRecentError();
+        }
+
+        if (enable_circuit_breaker) {
+            sending_sock->FeedbackCircuitBreaker(error_code,
+                butil::gettimeofday_us() - begin_time_us);
+        }
+    }
+
     switch (c->connection_type()) {
     case CONNECTION_TYPE_UNKNOWN:
         break;
@@ -745,7 +762,7 @@ void Controller::Call::OnComplete(
             // main socket should die as well.
             // NOTE: main socket may be wrongly set failed (provided that
             // short/pooled socket does not hold a ref of the main socket).
-            // E.g. a in-parallel RPC sets the peer_id to be failed
+            // E.g. an in-parallel RPC sets the peer_id to be failed
             //   -> this RPC meets ECONNREFUSED
             //   -> main socket gets revived from HC
             //   -> this RPC sets main socket to be failed again.
@@ -753,6 +770,7 @@ void Controller::Call::OnComplete(
         }
         break;
     }
+
     if (ELOGOFF == error_code) {
         SocketUniquePtr sock;
         if (Socket::Address(peer_id, &sock) == 0) {
@@ -760,20 +778,11 @@ void Controller::Call::OnComplete(
             sock->SetLogOff();
         }
     }
-    if (enable_circuit_breaker && sending_sock) {
-        sending_sock->FeedbackCircuitBreaker(error_code, 
-            butil::gettimeofday_us() - begin_time_us);
-    }
-    
+
     if (need_feedback) {
         const LoadBalancer::CallInfo info =
             { begin_time_us, peer_id, error_code, c };
         c->_lb->Feedback(info);
-    }
-
-    if (stream_user_data) {
-        stream_user_data->DestroyStreamUserData(sending_sock, c, error_code, end_of_rpc);
-        stream_user_data = NULL;
     }
 
     // Release the `Socket' we used to send/receive data
@@ -819,7 +828,7 @@ void Controller::EndRPC(const CompletionInfo& info) {
                          << info.id << " current_cid=" << current_id()
                          << " initial_cid=" << _correlation_id
                          << " stream_user_data=" << _current_call.stream_user_data
-                         << " sending_sock=" << *_current_call.sending_sock;
+                         << " sending_sock=" << _current_call.sending_sock.get();
         }
         _current_call.OnComplete(this, ECANCELED, false, false);
         if (_unfinished_call != NULL) {
@@ -866,7 +875,7 @@ void Controller::EndRPC(const CompletionInfo& info) {
     const CallId saved_cid = _correlation_id;
     if (_done) {
         if (!FLAGS_usercode_in_pthread || _done == DoNothing()/*Note*/) {
-            // Note: no need to run DoNothing in backup thread when pthread 
+            // Note: no need to run DoNothing in backup thread when pthread
             // mode is on. Otherwise there's a tricky deadlock:
             // void SomeService::CallMethod(...) { // -usercode_in_pthread=true
             //   ...
@@ -876,7 +885,7 @@ void Controller::EndRPC(const CompletionInfo& info) {
             // }
             // Join is not signalled when the done does not Run() and the done
             // can't Run() because all backup threads are blocked by Join().
-            
+
             OnRPCEnd(butil::gettimeofday_us());
             const bool destroy_cid_in_done = has_flag(FLAGS_DESTROY_CID_IN_DONE);
             _done->Run();
@@ -978,7 +987,7 @@ void Controller::IssueRPC(int64_t start_realtime_us) {
         // Don't use _current_call.peer_id which is set to -1 after construction
         // of the backup call.
         const int rc = Socket::Address(_single_server_id, &tmp_sock);
-        if (rc != 0 || tmp_sock->IsLogOff()) {
+        if (rc != 0 || (!is_health_check_call() && !tmp_sock->IsAvailable())) {
             SetFailed(EHOSTDOWN, "Not connected to %s yet, server_id=%" PRIu64,
                       endpoint2str(_remote_side).c_str(), _single_server_id);
             tmp_sock.reset();  // Release ref ASAP
@@ -1028,7 +1037,7 @@ void Controller::IssueRPC(int64_t start_realtime_us) {
     }
     // Handle connection type
     if (_connection_type == CONNECTION_TYPE_SINGLE ||
-        _stream_creator != NULL) { // let user decides the sending_socket
+        _stream_creator != NULL) { // let user decides the sending_sock
         // in the callback(according to connection_type) directly
         _current_call.sending_sock.reset(tmp_sock.release());
         // TODO(gejun): Setting preferred index of single-connected socket
@@ -1110,10 +1119,10 @@ void Controller::IssueRPC(int64_t start_realtime_us) {
     timespec connect_abstime;
     timespec* pabstime = NULL;
     if (_connect_timeout_ms > 0) {
-        if (_abstime_us >= 0) {
+        if (_deadline_us >= 0) {
             connect_abstime = butil::microseconds_to_timespec(
                 std::min(_connect_timeout_ms * 1000L + start_realtime_us,
-                         _abstime_us));
+                         _deadline_us));
         } else {
             connect_abstime = butil::microseconds_to_timespec(
                 _connect_timeout_ms * 1000L + start_realtime_us);
@@ -1281,7 +1290,7 @@ void Controller::HandleStreamConnection(Socket *host_socket) {
     if (_request_stream == INVALID_STREAM_ID) {
         CHECK(!has_remote_stream());
         return;
-    } 
+    }
     SocketUniquePtr ptr;
     if (!FailedInline()) {
         if (Socket::Address(_request_stream, &ptr) != 0) {
@@ -1298,7 +1307,7 @@ void Controller::HandleStreamConnection(Socket *host_socket) {
     if (FailedInline()) {
         Stream::SetFailed(_request_stream);
         if (_remote_stream_settings != NULL) {
-            policy::SendStreamRst(host_socket, 
+            policy::SendStreamRst(host_socket,
                                   _remote_stream_settings->stream_id());
         }
         return;
@@ -1323,9 +1332,9 @@ void WebEscape(const std::string& source, std::string* output) {
     }
 }
 
-void Controller::reset_rpc_dump_meta(RpcDumpMeta* meta) { 
-    delete _rpc_dump_meta;
-    _rpc_dump_meta = meta;
+void Controller::reset_sampled_request(SampledRequest* req) {
+    delete _sampled_request;
+    _sampled_request = req;
 }
 
 void Controller::set_stream_creator(StreamCreator* sc) {
@@ -1352,7 +1361,7 @@ Controller::CreateProgressiveAttachment(StopStyle stop_style) {
     }
     SocketUniquePtr httpsock;
     _current_call.sending_sock->ReAddress(&httpsock);
-    
+
     if (stop_style == FORCE_STOP) {
         httpsock->fail_me_at_server_stop();
     }

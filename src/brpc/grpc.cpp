@@ -1,18 +1,20 @@
-// Copyright (c) 2018 brpc authors.
-// 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-//     http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
-// Authors: Jiashun Zhu(zhujiashun@bilibili.com)
 
 
 #include <sstream>                  // std::stringstream
@@ -164,6 +166,43 @@ void PercentDecode(const std::string& str, std::string* str_out) {
     if (str_out) {
         *str_out = unescaped.str();
     }
+}
+
+int64_t ConvertGrpcTimeoutToUS(const std::string* grpc_timeout) {
+    if (!grpc_timeout || grpc_timeout->empty()) {
+        return -1;
+    }
+    char* endptr = NULL;
+    int64_t timeout_value = (int64_t)strtol(grpc_timeout->data(), &endptr, 10);
+    // Only the format that the digit number is equal to (timeout header size - 1)
+    // is valid. Otherwise the format is not valid and is treated as no deadline.
+    // For example:
+    //      "1H", "2993S", "82m" is valid.
+    //      "30A" is also valid, but the following switch would fall into default
+    //          case and return -1 since 'A' is not a valid time unit.
+    //      "123ASH" is not vaid since the digit number is 3, while the size is 6.
+    //      "HHH" is not valid since the dight number is 0, while the size is 3.
+    if ((size_t)(endptr - grpc_timeout->data()) != grpc_timeout->size() - 1) {
+        return -1;
+    }
+    switch (*endptr) {
+        case 'H':
+            return timeout_value * 3600 * 1000000;
+        case 'M':
+            return timeout_value * 60 * 1000000;
+        case 'S':
+            return timeout_value * 1000000;
+        case 'm':
+            return timeout_value * 1000;
+        case 'u':
+            return timeout_value;
+        case 'n':
+            timeout_value = (timeout_value + 500) / 1000;
+            return (timeout_value == 0) ? 1 : timeout_value;
+        default:
+            return -1;
+    }
+    CHECK(false) << "Impossible";
 }
 
 } // namespace brpc
