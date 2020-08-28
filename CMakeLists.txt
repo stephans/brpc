@@ -3,8 +3,9 @@ cmake_minimum_required(VERSION 3.5)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
 include(HunterGate)
 HunterGate(
-    URL "https://github.com/ambroff/hunter/archive/386258ea6c05e5967be8470945b9dd24b0e68c53.zip"
-    SHA1 "589d3a63575f28c37e290701234cc923418a125a"
+    URL "https://github.com/hzxa21/hunter/archive/incubator-2020-07-31_1.zip"
+    SHA1 "73cc0b935273e7565d05c74e4c240fd055ce5428"
+    LOCAL
 )
 
 project(brpc)
