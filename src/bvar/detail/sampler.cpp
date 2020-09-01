@@ -60,6 +60,7 @@ public:
         : _created(false)
         , _stop(false)
         , _cumulated_time_us(0) {
+        pthread_atfork(NULL, NULL, child_callback_atfork);
         create_sampling_thread();
     }
     ~SamplerCollector() {
@@ -88,7 +89,6 @@ private:
             LOG(FATAL) << "Fail to create sampling_thread, " << berror(rc);
         } else {
             _created = true;
-            pthread_atfork(NULL, NULL, child_callback_atfork);
         }
     }
 
