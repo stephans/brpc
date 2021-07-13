@@ -60,7 +60,8 @@ public:
         : redis_service(rs)
         , batched_size(0) {}
 
-    ~RedisConnContext();
+    ~RedisConnContext() override;
+
     // @Destroyable
     void Destroy() override;
 

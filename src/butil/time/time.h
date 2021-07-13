@@ -131,11 +131,6 @@ class BUTIL_EXPORT TimeDelta {
   int64_t InMillisecondsRoundedUp() const;
   int64_t InMicroseconds() const;
 
-  TimeDelta& operator=(TimeDelta other) {
-    delta_ = other.delta_;
-    return *this;
-  }
-
   // Computations with other deltas.
   TimeDelta operator+(TimeDelta other) const {
     return TimeDelta(delta_ + other.delta_);
@@ -424,11 +419,6 @@ class BUTIL_EXPORT Time {
   // midnight on that day.
   Time LocalMidnight() const;
 
-  Time& operator=(Time other) {
-    us_ = other.us_;
-    return *this;
-  }
-
   // Compute the difference between two times.
   TimeDelta operator-(Time other) const {
     return TimeDelta(us_ - other.us_);
@@ -689,11 +679,6 @@ class BUTIL_EXPORT TimeTicks {
   // For serializing, use FromInternalValue to reconstitute.
   int64_t ToInternalValue() const {
     return ticks_;
-  }
-
-  TimeTicks& operator=(TimeTicks other) {
-    ticks_ = other.ticks_;
-    return *this;
   }
 
   // Compute the difference between two times.

@@ -315,6 +315,9 @@ struct GenericStringRef {
     GenericStringRef(const CharType* str, SizeType len)
         : s(str), length(len) { RAPIDJSON_ASSERT(s != NULL); }
 
+    //! Disallow copy-assignment
+    GenericStringRef operator=(const GenericStringRef&) = delete;
+
     //! implicit conversion to plain CharType pointer
     operator const Ch *() const { return s; }
 
@@ -322,8 +325,6 @@ struct GenericStringRef {
     const SizeType length; //!< length of the string (excluding the trailing NULL terminator)
 
 private:
-    //! Disallow copy-assignment
-    GenericStringRef operator=(const GenericStringRef&);
     //! Disallow construction from non-const array
     template<SizeType N>
     GenericStringRef(CharType (&str)[N]) /* = delete */;

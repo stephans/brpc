@@ -65,7 +65,7 @@ class SharedLoadBalancer;
 class ExcludedServers;
 class RPCSender;
 class StreamSettings;
-class SampledRequest;
+struct SampledRequest;
 class MongoContext;
 class RetryPolicy;
 class InputMessageBase;
