@@ -409,7 +409,6 @@ static void DisplayResult(Controller* cntl,
     const bool show_ccount = cntl->http_request().uri().GetQuery("ccount");
     const std::string* base_name = cntl->http_request().uri().GetQuery("base");
     const std::string* display_type_query = cntl->http_request().uri().GetQuery("display_type");
-    const char* flamegraph_tool = getenv("FLAMEGRAPH_PL_PATH");
     DisplayType display_type = DisplayType::kDot;
     if (display_type_query) {
         display_type = StringToDisplayType(*display_type_query);

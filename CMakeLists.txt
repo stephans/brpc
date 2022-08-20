@@ -15,18 +15,27 @@
 # specific language governing permissions and limitations
 # under the License.
 
-cmake_minimum_required(VERSION 2.8.10)
-project(brpc C CXX)
+cmake_minimum_required(VERSION 3.19)
 
-option(WITH_GLOG "With glog" OFF)
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+include(HunterGate)
+HunterGate(
+  URL "https://github.com/ambroff/hunter/archive/incubator-2022-08-18_1.zip"
+  SHA1 "9b4318a65c5b9f65b1e9a9eba8deab48b1589a64"
+  LOCAL
+  )
+
+project(brpc)
+
+option(WITH_GLOG "With glog" ON)
 option(WITH_MESALINK "With MesaLink" OFF)
 option(DEBUG "Print debug logs" OFF)
 option(WITH_DEBUG_SYMBOLS "With debug symbols" ON)
 option(WITH_THRIFT "With thrift framed protocol supported" OFF)
 option(WITH_SNAPPY "With snappy" OFF)
 option(BUILD_UNIT_TESTS "Whether to build unit tests" OFF)
-option(BUILD_BRPC_TOOLS "Whether to build brpc tools" ON)
-option(DOWNLOAD_GTEST "Download and build a fresh copy of googletest. Requires Internet access." ON)
+option(BUILD_BRPC_TOOLS "Whether to build brpc tools" OFF)
+option(DOWNLOAD_GTEST "Download and build a fresh copy of googletest. Requires Internet access." OFF)
 
 # Enable MACOSX_RPATH. Run "cmake --help-policy CMP0042" for policy details.
 if(POLICY CMP0042)
@@ -48,6 +57,10 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # require at least clang 3.3
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.3)
         message(FATAL_ERROR "Clang is too old, please install a newer version supporting C++11")
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.0)
+        message(FATAL_ERROR "AppleClang is too old, please install an updated version of XCode")
     endif()
 else()
     message(WARNING "You are using an unsupported compiler! Compilation has only been tested with Clang and GCC.")
@@ -72,9 +85,14 @@ include(GNUInstallDirs)
 
 configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_SOURCE_DIR}/src/butil/config.h @ONLY)
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+hunter_add_package(gflags)
+hunter_add_package(Protobuf)
+hunter_add_package(ZLIB)
+hunter_add_package(leveldb)
+hunter_add_package(openssl)
 
-find_package(GFLAGS REQUIRED)
+find_package(gflags CONFIG REQUIRED)
+get_target_property(GFLAGS_INCLUDE_PATH gflags INTERFACE_INCLUDE_DIRECTORIES)
 
 execute_process(
     COMMAND bash -c "grep \"namespace [_A-Za-z0-9]\\+ {\" ${GFLAGS_INCLUDE_PATH}/gflags/gflags_declare.h | head -1 | awk '{print $2}' | tr -d '\n'"
@@ -144,14 +162,15 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     endif()
 endif()
 
-find_package(Protobuf REQUIRED)
 find_package(Threads REQUIRED)
+find_package(ZLIB CONFIG REQUIRED)
 
-find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h)
-find_library(LEVELDB_LIB NAMES leveldb)
-if ((NOT LEVELDB_INCLUDE_PATH) OR (NOT LEVELDB_LIB))
-    message(FATAL_ERROR "Fail to find leveldb")
-endif()
+find_package(Protobuf CONFIG REQUIRED)
+get_target_property(PROTOBUF_INCLUDE_DIR protobuf::libprotobuf INTERFACE_INCLUDE_DIRECTORIES)
+
+find_package(leveldb CONFIG REQUIRED)
+get_target_property(LEVELDB_INCLUDE_PATH leveldb::leveldb INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(LEVELDB_LIB leveldb::leveldb LINK_INTERFACE_LIBRARIES)
 
 if(WITH_SNAPPY)
     find_path(SNAPPY_INCLUDE_PATH NAMES snappy.h)
@@ -163,12 +182,8 @@ if(WITH_SNAPPY)
 endif()
 
 if(WITH_GLOG)
-    find_path(GLOG_INCLUDE_PATH NAMES glog/logging.h)
-    find_library(GLOG_LIB NAMES glog)
-    if((NOT GLOG_INCLUDE_PATH) OR (NOT GLOG_LIB))
-        message(FATAL_ERROR "Fail to find glog")
-    endif()
-    include_directories(${GLOG_INCLUDE_PATH})
+    hunter_add_package(glog)
+    find_package(glog CONFIG REQUIRED)
 endif()
 
 if(WITH_MESALINK)
@@ -187,37 +202,23 @@ if(NOT PROTOC_LIB)
     message(FATAL_ERROR "Fail to find protoc lib")
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set(OPENSSL_ROOT_DIR
-        "/usr/local/opt/openssl"    # Homebrew installed OpenSSL
-        )
-endif()
-
-find_package(OpenSSL)
-
-include_directories(
-        ${GFLAGS_INCLUDE_PATH}
-        ${PROTOBUF_INCLUDE_DIRS}
-        ${LEVELDB_INCLUDE_PATH}
-        ${OPENSSL_INCLUDE_DIR}
-        )
+find_package(OpenSSL REQUIRED)
 
 set(DYNAMIC_LIB
-    ${GFLAGS_LIBRARY}
-    ${PROTOBUF_LIBRARIES}
-    ${LEVELDB_LIB}
+    gflags
+    leveldb::leveldb
+    protobuf::libprotobuf
     ${PROTOC_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
     ${THRIFT_LIB}
     ${THRIFTNB_LIB}
-    ${OPENSSL_CRYPTO_LIBRARY}
     dl
     z)
 
 if(WITH_MESALINK)
     list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
 else()
-    list(APPEND DYNAMIC_LIB ${OPENSSL_SSL_LIBRARY})
+    list(APPEND DYNAMIC_LIB OpenSSL::SSL OpenSSL::Crypto)
 endif()
 
 set(BRPC_PRIVATE_LIBS "-lgflags -lprotobuf -lleveldb -lprotoc -lssl -lcrypto -ldl -lz")
@@ -440,6 +441,10 @@ compile_proto(PROTO_HDRS PROTO_SRCS ${PROJECT_BINARY_DIR}
                                     ${PROJECT_SOURCE_DIR}/src
                                     "${PROTO_FILES}")
 add_library(PROTO_LIB OBJECT ${PROTO_SRCS} ${PROTO_HDRS})
+
+target_link_libraries(PROTO_LIB PUBLIC
+  protobuf::libprotobuf
+  )
 
 set(SOURCES
     ${BVAR_SOURCES}

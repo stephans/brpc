@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+find_package(Protobuf CONFIG REQUIRED)
+
 if(NOT DEBUG)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNDEBUG")
@@ -26,6 +28,22 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 add_library(BUTIL_LIB OBJECT ${BUTIL_SOURCES})
 add_library(SOURCES_LIB OBJECT ${SOURCES})
 add_dependencies(SOURCES_LIB PROTO_LIB)
+
+target_link_libraries(BUTIL_LIB PUBLIC
+  gflags
+  protobuf::libprotobuf
+  leveldb::leveldb
+  OpenSSL::SSL
+  OpenSSL::Crypto
+  )
+
+target_link_libraries(SOURCES_LIB PUBLIC
+  gflags
+  protobuf::libprotobuf
+  leveldb::leveldb
+  OpenSSL::SSL
+  OpenSSL::Crypto
+  )
 
 # shared library needs POSITION_INDEPENDENT_CODE
 set_property(TARGET ${SOURCES_LIB} PROPERTY POSITION_INDEPENDENT_CODE 1)
@@ -47,8 +65,10 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/output/bin)
 set(protoc_gen_mcpack_SOURCES
     ${PROJECT_SOURCE_DIR}/src/mcpack2pb/generator.cpp
  )
-    
-add_executable(protoc-gen-mcpack ${protoc_gen_mcpack_SOURCES})
+
+if (BUILD_BRPC_TOOLS)
+    add_executable(protoc-gen-mcpack ${protoc_gen_mcpack_SOURCES})
+endif()
 
 if(BUILD_SHARED_LIBS)
     add_library(brpc-shared SHARED $<TARGET_OBJECTS:BUTIL_LIB> 
@@ -63,7 +83,9 @@ if(BUILD_SHARED_LIBS)
     endif()
     SET_TARGET_PROPERTIES(brpc-shared PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPUT 1)
 
-    target_link_libraries(protoc-gen-mcpack brpc-shared ${DYNAMIC_LIB} pthread)
+    if (BUILD_BRPC_TOOLS)
+        target_link_libraries(protoc-gen-mcpack brpc-shared ${DYNAMIC_LIB} pthread)
+    endif()
 
     install(TARGETS brpc-shared
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -71,7 +93,22 @@ if(BUILD_SHARED_LIBS)
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             )
 else()
-    target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} pthread)
+    if (BUILD_BRPC_TOOLS)
+        target_link_libraries(protoc-gen-mcpack PUBLIC
+          brpc-static
+          protobuf::libprotobuf
+          ${DYNAMIC_LIB}
+          pthread
+          )
+    endif()
+
+    target_link_libraries(brpc-static
+      gflags
+      protobuf::libprotobuf
+      leveldb::leveldb
+      OpenSSL::SSL
+      OpenSSL::Crypto
+      )
 endif()
 
 
