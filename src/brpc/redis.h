@@ -106,12 +106,12 @@ public:
     bool SerializeTo(butil::IOBuf* buf) const;
 
     // Protobuf methods.
-    RedisRequest* New() const;
+    RedisRequest* New() const override;
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
     RedisRequest* New(::google::protobuf::Arena* arena) const override;
 #endif
-    void CopyFrom(const ::google::protobuf::Message& from);
-    void MergeFrom(const ::google::protobuf::Message& from);
+    void CopyFrom(const ::google::protobuf::Message& from) override;
+    void MergeFrom(const ::google::protobuf::Message& from) override;
     void CopyFrom(const RedisRequest& from);
     void MergeFrom(const RedisRequest& from);
     void Clear() override;
@@ -179,18 +179,12 @@ public:
     
     // implements Message ----------------------------------------------
   
-<<<<<<< HEAD
-    RedisResponse* New() const override;
-    void CopyFrom(const ::google::protobuf::Message& from) override;
-    void MergeFrom(const ::google::protobuf::Message& from) override;
-=======
     RedisResponse* New() const;
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
     RedisResponse* New(::google::protobuf::Arena* arena) const override;
 #endif
     void CopyFrom(const ::google::protobuf::Message& from);
     void MergeFrom(const ::google::protobuf::Message& from);
->>>>>>> 345c9dbe (Improvement: brpc support higher version of protobuf)
     void CopyFrom(const RedisResponse& from);
     void MergeFrom(const RedisResponse& from);
     void Clear() override;
