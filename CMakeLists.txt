@@ -1,12 +1,17 @@
 cmake_minimum_required(VERSION 3.5)
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
-include(HunterGate)
-HunterGate(
+
+option(WITH_HUNTER "With hunter" OFF)
+
+if(WITH_HUNTER)
+  include(HunterGate)
+  HunterGate(
     URL "https://github.com/hzxa21/hunter/archive/incubator-2020-07-31_1.zip"
     SHA1 "73cc0b935273e7565d05c74e4c240fd055ce5428"
     LOCAL
-)
+  )
+endif()
 
 project(brpc)
 
@@ -66,11 +71,20 @@ if(WITH_THRIFT)
     set(THRIFT_LIB "thrift")
 endif()
 
+if (WITH_HUNTER)
+  hunter_add_package(md5)
+  hunter_add_package(OpenSSL)
+  hunter_add_package(ZLIB)
+  hunter_add_package(Protobuf)
+  hunter_add_package(leveldb)
+  hunter_add_package(glog)
+  hunter_add_package(gflags)
+endif()
+
 include(GNUInstallDirs)
 
 configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_SOURCE_DIR}/src/butil/config.h @ONLY)
 
-hunter_add_package(gflags)
 find_package(gflags CONFIG REQUIRED)
 get_target_property(GFLAGS_INCLUDE_PATH gflags INTERFACE_INCLUDE_DIRECTORIES)
 
@@ -141,26 +155,20 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     endif()
 endif()
 
-hunter_add_package(md5)
 find_package(md5 CONFIG REQUIRED)
 
-hunter_add_package(OpenSSL)
 find_package(OpenSSL REQUIRED)
 
-hunter_add_package(ZLIB)
 find_package(ZLIB CONFIG REQUIRED)
 
 option(protobuf_MODULE_COMPATIBLE "use protobuf in module compatible mode" ON)
-hunter_add_package(Protobuf)
 find_package(Protobuf CONFIG REQUIRED)
 
-hunter_add_package(leveldb)
 find_package(leveldb CONFIG REQUIRED)
 
 include(FindThreads)
 
 if(WITH_GLOG)
-    hunter_add_package(glog)
     find_package(glog CONFIG REQUIRED)
 endif()
 
