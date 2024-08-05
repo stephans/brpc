@@ -17,6 +17,8 @@
 
 cmake_minimum_required(VERSION 2.8.12)
 
+set(CMAKE_CXX_STANDARD 20)
+
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(HunterGate)
 HunterGate(
@@ -135,20 +137,6 @@ set(CMAKE_CPP_FLAGS "${CMAKE_CPP_FLAGS} ${DEBUG_SYMBOL} ${THRIFT_CPP_FLAG}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CPP_FLAGS} -O2 -pipe -Wall -W -fPIC -fstrict-aliasing -Wno-invalid-offsetof -Wno-unused-parameter -fno-omit-frame-pointer")
 set(CMAKE_C_FLAGS "${CMAKE_CPP_FLAGS} -O2 -pipe -Wall -W -fPIC -fstrict-aliasing -Wno-unused-parameter -fno-omit-frame-pointer")
 
-macro(use_cxx11)
-if(CMAKE_VERSION VERSION_LESS "3.1.3")
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    endif()
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    endif()
-else()
-    set(CMAKE_CXX_STANDARD 11)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
-endif()
-endmacro(use_cxx11)
-
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     #required by butil/crc32.cc to boost performance for 10x
     if((CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)") AND NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.4))
@@ -181,9 +169,6 @@ hunter_add_package(leveldb)
 find_package(leveldb CONFIG REQUIRED)
 
 if(Protobuf_VERSION GREATER 4.21)
-    # required by absl
-    set(CMAKE_CXX_STANDARD 17)
-
     find_package(absl REQUIRED CONFIG)
     set(protobuf_ABSL_USED_TARGETS
         absl::absl_check
@@ -221,9 +206,8 @@ if(Protobuf_VERSION GREATER 4.21)
         absl::utility
         absl::variant
     )
-else()
-    use_cxx11()
 endif()
+
 find_package(Threads REQUIRED)
 
 find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h)
