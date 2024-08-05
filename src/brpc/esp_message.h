@@ -57,13 +57,16 @@ public:
     EspMessage* New() const PB_319_OVERRIDE;
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
     EspMessage* New(::google::protobuf::Arena* arena) const override;
+
+    const ::google::protobuf::MessageLite::ClassData *
+    GetClassData() const override;
 #endif
-    void CopyFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
-    void MergeFrom(const ::google::protobuf::Message& from) override;
+        void CopyFrom(const ::google::protobuf::Message &from) PB_321_OVERRIDE;
+    void MergeFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
     void CopyFrom(const EspMessage& from);
     void MergeFrom(const EspMessage& from);
     void Clear() override;
-    bool IsInitialized() const override;
+    bool IsInitialized() const PB_321_OVERRIDE;
 
     int ByteSize() const;
     bool MergePartialFromCodedStream(
@@ -75,7 +78,7 @@ public:
     int GetCachedSize() const PB_422_OVERRIDE { return ByteSize(); }
 
 protected:
-    ::google::protobuf::Metadata GetMetadata() const override;
+    ::google::protobuf::Metadata GetMetadata() const PB_422_OVERRIDE;
 
 private:
     void SharedCtor();

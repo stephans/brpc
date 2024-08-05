@@ -47,18 +47,21 @@ public:
     SerializedResponse* New() const PB_319_OVERRIDE;
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
     SerializedResponse* New(::google::protobuf::Arena* arena) const override;
+
+    const ::google::protobuf::MessageLite::ClassData *
+    GetClassData() const override;
 #endif
     void CopyFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
     void CopyFrom(const SerializedResponse& from);
     void Clear() override;
-    bool IsInitialized() const override;
+    bool IsInitialized() const PB_321_OVERRIDE;
     int ByteSize() const;
-    int GetCachedSize() const override { return (int)_serialized.size(); }
+    int GetCachedSize() const PB_321_OVERRIDE { return (int)_serialized.size(); }
     butil::IOBuf& serialized_data() { return _serialized; }
     const butil::IOBuf& serialized_data() const { return _serialized; }
 
 protected:
-    ::google::protobuf::Metadata GetMetadata() const override;
+    ::google::protobuf::Metadata GetMetadata() const PB_321_OVERRIDE;
     
 private:
     bool MergePartialFromCodedStream(
@@ -67,11 +70,11 @@ private:
         ::google::protobuf::io::CodedOutputStream* output) const PB_310_OVERRIDE;
     ::google::protobuf::uint8* SerializeWithCachedSizesToArray(
         ::google::protobuf::uint8* output) const PB_310_OVERRIDE;
-    void MergeFrom(const ::google::protobuf::Message& from) override;
+    void MergeFrom(const ::google::protobuf::Message& from) PB_310_OVERRIDE;
     void MergeFrom(const SerializedResponse& from);
     void SharedCtor();
     void SharedDtor();
-    void SetCachedSize(int size) const override;
+    void SetCachedSize(int size) const PB_310_OVERRIDE;
   
 private:
     butil::IOBuf _serialized;

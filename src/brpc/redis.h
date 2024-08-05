@@ -111,13 +111,16 @@ public:
     RedisRequest* New() const PB_319_OVERRIDE;
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
     RedisRequest* New(::google::protobuf::Arena* arena) const override;
+
+    const ::google::protobuf::MessageLite::ClassData *
+    GetClassData() const override;
 #endif
     void CopyFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
-    void MergeFrom(const ::google::protobuf::Message& from) override;
+    void MergeFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
     void CopyFrom(const RedisRequest& from);
     void MergeFrom(const RedisRequest& from);
     void Clear() override;
-    bool IsInitialized() const override;
+    bool IsInitialized() const PB_321_OVERRIDE;
   
     int ByteSize() const;
     bool MergePartialFromCodedStream(
@@ -132,7 +135,7 @@ public:
     void Print(std::ostream&) const;
 
 protected:
-    ::google::protobuf::Metadata GetMetadata() const override;
+    ::google::protobuf::Metadata GetMetadata() const PB_422_OVERRIDE;
 
 private:
     void SharedCtor();
@@ -184,13 +187,16 @@ public:
     RedisResponse* New() const PB_319_OVERRIDE;
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
     RedisResponse* New(::google::protobuf::Arena* arena) const override;
+
+    const ::google::protobuf::MessageLite::ClassData *
+    GetClassData() const override;
 #endif
     void CopyFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
-    void MergeFrom(const ::google::protobuf::Message& from) override;
+    void MergeFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
     void CopyFrom(const RedisResponse& from);
     void MergeFrom(const RedisResponse& from);
     void Clear() override;
-    bool IsInitialized() const override;
+    bool IsInitialized() const PB_321_OVERRIDE;
   
     int ByteSize() const;
     bool MergePartialFromCodedStream(
@@ -203,7 +209,7 @@ public:
     static const ::google::protobuf::Descriptor* descriptor();
 
 protected:
-    ::google::protobuf::Metadata GetMetadata() const override;
+    ::google::protobuf::Metadata GetMetadata() const PB_422_OVERRIDE;
 
 private:
     void SharedCtor();

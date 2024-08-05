@@ -93,13 +93,16 @@ public:
     MemcacheRequest* New() const PB_319_OVERRIDE;
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
     MemcacheRequest* New(::google::protobuf::Arena* arena) const override;
+
+    const ::google::protobuf::MessageLite::ClassData *
+    GetClassData() const override;
 #endif
-    void CopyFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
-    void MergeFrom(const ::google::protobuf::Message& from) override;
+        void CopyFrom(const ::google::protobuf::Message &from) PB_321_OVERRIDE;
+    void MergeFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
     void CopyFrom(const MemcacheRequest& from);
     void MergeFrom(const MemcacheRequest& from);
     void Clear() override;
-    bool IsInitialized() const override;
+    bool IsInitialized() const PB_321_OVERRIDE;
   
     int ByteSize() const;
     bool MergePartialFromCodedStream(
@@ -112,7 +115,7 @@ public:
     static const ::google::protobuf::Descriptor* descriptor();
 
 protected:
-    ::google::protobuf::Metadata GetMetadata() const override;
+    ::google::protobuf::Metadata GetMetadata() const PB_422_OVERRIDE;
     
 private:
     bool GetOrDelete(uint8_t command, const butil::StringPiece& key);
@@ -206,13 +209,16 @@ public:
     MemcacheResponse* New() const PB_319_OVERRIDE;
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
     MemcacheResponse* New(::google::protobuf::Arena* arena) const override;
+
+    const ::google::protobuf::MessageLite::ClassData *
+    GetClassData() const override;
 #endif
     void CopyFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
-    void MergeFrom(const ::google::protobuf::Message& from) override;
+    void MergeFrom(const ::google::protobuf::Message& from) PB_321_OVERRIDE;
     void CopyFrom(const MemcacheResponse& from);
     void MergeFrom(const MemcacheResponse& from);
     void Clear() override;
-    bool IsInitialized() const override;
+    bool IsInitialized() const PB_321_OVERRIDE;
   
     int ByteSize() const;
     bool MergePartialFromCodedStream(
@@ -225,7 +231,7 @@ public:
     static const ::google::protobuf::Descriptor* descriptor();
 
 protected:
-    ::google::protobuf::Metadata GetMetadata() const override;
+    ::google::protobuf::Metadata GetMetadata() const PB_422_OVERRIDE;
 
 private:
     bool PopCounter(uint8_t command, uint64_t* new_value, uint64_t* cas_value);

@@ -16,6 +16,15 @@
 # under the License.
 
 cmake_minimum_required(VERSION 2.8.12)
+
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(HunterGate)
+HunterGate(
+  URL "https://github.com/ambroff/hunter/archive/refs/tags/main-2024.8.4.2.tar.gz"
+  SHA1 "bd946718035cb2f0a5cea06fdea7f5c6f2a9006a"
+  LOCAL
+)
+
 project(brpc C CXX)
 
 option(WITH_GLOG "With glog" OFF)
@@ -83,9 +92,9 @@ include(GNUInstallDirs)
 
 configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_SOURCE_DIR}/src/butil/config.h @ONLY)
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-
-find_package(GFLAGS REQUIRED)
+hunter_add_package(gflags)
+find_package(gflags CONFIG REQUIRED)
+get_target_property(GFLAGS_INCLUDE_PATH gflags INTERFACE_INCLUDE_DIRECTORIES)
 
 execute_process(
     COMMAND bash -c "grep \"namespace [_A-Za-z0-9]\\+ {\" ${GFLAGS_INCLUDE_PATH}/gflags/gflags_declare.h | head -1 | awk '{print $2}' | tr -d '\n'"
@@ -153,7 +162,24 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     endif()
 endif()
 
-find_package(Protobuf REQUIRED)
+hunter_add_package(abseil)
+
+hunter_add_package(md5)
+find_package(md5 CONFIG REQUIRED)
+
+hunter_add_package(OpenSSL)
+find_package(OpenSSL REQUIRED)
+
+hunter_add_package(ZLIB)
+find_package(ZLIB CONFIG REQUIRED)
+
+option(protobuf_MODULE_COMPATIBLE "use protobuf in module compatible mode" ON)
+hunter_add_package(Protobuf)
+find_package(Protobuf CONFIG REQUIRED)
+
+hunter_add_package(leveldb)
+find_package(leveldb CONFIG REQUIRED)
+
 if(Protobuf_VERSION GREATER 4.21)
     # required by absl
     set(CMAKE_CXX_STANDARD 17)
@@ -216,12 +242,8 @@ if(WITH_SNAPPY)
 endif()
 
 if(WITH_GLOG)
-    find_path(GLOG_INCLUDE_PATH NAMES glog/logging.h)
-    find_library(GLOG_LIB NAMES glog)
-    if((NOT GLOG_INCLUDE_PATH) OR (NOT GLOG_LIB))
-        message(FATAL_ERROR "Fail to find glog")
-    endif()
-    include_directories(${GLOG_INCLUDE_PATH})
+  hunter_add_package(glog)
+  find_package(glog CONFIG REQUIRED)
 endif()
 
 if(WITH_MESALINK)
@@ -514,7 +536,6 @@ set(PROTO_FILES idl_options.proto
                 brpc/streaming_rpc_meta.proto
                 brpc/proto_base.proto)
 file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/output/include/brpc)
-set(PROTOC_FLAGS ${PROTOC_FLAGS} -I${PROTOBUF_INCLUDE_DIR})
 compile_proto(PROTO_HDRS PROTO_SRCS ${PROJECT_BINARY_DIR}
                                     ${PROJECT_BINARY_DIR}/output/include
                                     ${PROJECT_SOURCE_DIR}/src

@@ -56,7 +56,12 @@ NsheadMessage* NsheadMessage::New() const {
 
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
 NsheadMessage* NsheadMessage::New(::google::protobuf::Arena* arena) const {
-    return CreateMaybeMessage<NsheadMessage>(arena);
+    return ::google::protobuf::Arena::Create<NsheadMessage>(arena);
+}
+
+const ::google::protobuf::MessageLite::ClassData *
+NsheadMessage::GetClassData() const {
+  return nullptr;
 }
 #endif
 

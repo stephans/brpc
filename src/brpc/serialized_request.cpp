@@ -56,7 +56,11 @@ SerializedRequest* SerializedRequest::New() const {
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
 SerializedRequest*
 SerializedRequest::New(::google::protobuf::Arena* arena) const {
-    return CreateMaybeMessage<SerializedRequest>(arena);
+    return ::google::protobuf::Arena::Create<SerializedRequest>(arena);
+}
+
+const ::google::protobuf::MessageLite::ClassData* SerializedRequest::GetClassData() const {
+    return nullptr;
 }
 #endif
 

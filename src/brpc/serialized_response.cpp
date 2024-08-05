@@ -56,7 +56,12 @@ SerializedResponse* SerializedResponse::New() const {
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
 SerializedResponse*
 SerializedResponse::New(::google::protobuf::Arena* arena) const {
-    return CreateMaybeMessage<SerializedResponse>(arena);
+    return ::google::protobuf::Arena::Create<SerializedResponse>(arena);
+}
+
+const ::google::protobuf::MessageLite::ClassData *
+SerializedResponse::GetClassData() const {
+  return nullptr;
 }
 #endif
 

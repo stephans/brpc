@@ -64,17 +64,13 @@ if(WITH_THRIFT)
    check_thrift_version(brpc-static)
 endif()
 
+find_package(gflags CONFIG REQUIRED)
+target_link_libraries(brpc-static PUBLIC gflags)
+
 SET_TARGET_PROPERTIES(brpc-static PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPUT 1)
 
-# for protoc-gen-mcpack
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/output/bin)
     
-set(protoc_gen_mcpack_SOURCES
-    ${PROJECT_SOURCE_DIR}/src/mcpack2pb/generator.cpp
- )
-    
-add_executable(protoc-gen-mcpack ${protoc_gen_mcpack_SOURCES})
-
 if(BUILD_SHARED_LIBS)
     add_library(brpc-shared SHARED $<TARGET_OBJECTS:BUTIL_LIB> 
                                    $<TARGET_OBJECTS:SOURCES_LIB>
@@ -96,10 +92,23 @@ if(BUILD_SHARED_LIBS)
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             )
-else()
-    target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} pthread)
 endif()
 
+
+# for protoc-gen-mcpack
+if (BUILD_BRPC_TOOLS)
+  set(protoc_gen_mcpack_SOURCES
+    ${PROJECT_SOURCE_DIR}/src/mcpack2pb/generator.cpp
+  )
+
+  add_executable(protoc-gen-mcpack ${protoc_gen_mcpack_SOURCES})
+
+  if (BUILD_SHARED_LIBS)
+    target_link_libraries(protoc-gen-mcpack brpc-shared ${DYNAMIC_LIB} pthread)
+  else()
+    target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} pthread)
+  endif()
+endif()
 
 
 install(TARGETS brpc-static

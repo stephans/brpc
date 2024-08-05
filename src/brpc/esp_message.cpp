@@ -56,7 +56,12 @@ EspMessage* EspMessage::New() const {
 
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
 EspMessage* EspMessage::New(::google::protobuf::Arena* arena) const {
-    return CreateMaybeMessage<EspMessage>(arena);
+    return ::google::protobuf::Arena::Create<EspMessage>(arena);
+}
+
+const ::google::protobuf::MessageLite::ClassData *
+EspMessage::GetClassData() const {
+  return nullptr;
 }
 #endif
 

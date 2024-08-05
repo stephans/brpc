@@ -65,7 +65,11 @@ MemcacheRequest* MemcacheRequest::New() const {
 
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
 MemcacheRequest* MemcacheRequest::New(::google::protobuf::Arena* arena) const {
-    return CreateMaybeMessage<MemcacheRequest>(arena);
+    return ::google::protobuf::Arena::Create<MemcacheRequest>(arena);
+}
+
+const ::google::protobuf::MessageLite::ClassData *MemcacheRequest::GetClassData() const {
+    return nullptr;
 }
 #endif
 
@@ -216,7 +220,11 @@ MemcacheResponse* MemcacheResponse::New() const {
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
 MemcacheResponse*
 MemcacheResponse::New(::google::protobuf::Arena* arena) const {
-    return CreateMaybeMessage<MemcacheResponse>(arena);
+    return ::google::protobuf::Arena::Create<MemcacheResponse>(arena);
+}
+
+const ::google::protobuf::MessageLite::ClassData* MemcacheResponse::GetClassData() const {
+    return nullptr;
 }
 #endif
 

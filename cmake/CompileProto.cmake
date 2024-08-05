@@ -22,9 +22,15 @@ function(compile_proto OUT_HDRS OUT_SRCS DESTDIR HDR_OUTPUT_DIR PROTO_DIR PROTO_
     set(SRC ${DESTDIR}/${SRC})
     list(APPEND HDRS ${HDR})
     list(APPEND SRCS ${SRC})
+
+    if (PROTO_DIR STREQUAL "")
+      set(_PROTO_INCLUDE_FLAGS "")
+    else()
+      set(_PROTO_INCLUDE_FLAGS "-I${PROTO_DIR}")
+    endif()
     add_custom_command(
       OUTPUT ${HDR} ${SRC}
-      COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${PROTOC_FLAGS} -I${PROTO_DIR} --cpp_out=${DESTDIR} ${PROTO_DIR}/${P}
+      COMMAND ${PROTOBUF_PROTOC_EXECUTABLE} ${PROTOC_FLAGS} ${_PROTO_INCLUDE_FLAGS} --cpp_out=${DESTDIR} ${PROTO_DIR}/${P}
       COMMAND ${CMAKE_COMMAND} -E copy ${HDR} ${HDR_OUTPUT_DIR}/${HDR_RELATIVE}
       DEPENDS ${PROTO_DIR}/${P}
     )

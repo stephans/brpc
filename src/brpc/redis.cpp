@@ -61,7 +61,12 @@ RedisRequest* RedisRequest::New() const {
 
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
 RedisRequest* RedisRequest::New(::google::protobuf::Arena* arena) const {
-    return CreateMaybeMessage<RedisRequest>(arena);
+    return ::google::protobuf::Arena::Create<RedisRequest>(arena);
+}
+
+const ::google::protobuf::MessageLite::ClassData *
+RedisRequest::GetClassData() const {
+  return nullptr;
 }
 #endif
 
@@ -279,7 +284,11 @@ RedisResponse* RedisResponse::New() const {
 
 #if GOOGLE_PROTOBUF_VERSION >= 3006000
 RedisResponse* RedisResponse::New(::google::protobuf::Arena* arena) const {
-    return CreateMaybeMessage<RedisResponse>(arena);
+    return ::google::protobuf::Arena::Create<RedisResponse>(arena);
+}
+
+const ::google::protobuf::MessageLite::ClassData* RedisResponse::GetClassData() const {
+    return nullptr;
 }
 #endif
 
